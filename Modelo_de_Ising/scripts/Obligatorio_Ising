@@ -1,0 +1,81 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+def estado_inicial(N):
+    """
+    Paso (0): Genera una configuración inicial aleatoria (desordenada)[cite: 88, 89].
+    Devuelve una matriz NxN con espines 1 y -1.
+    """
+    estado = 2 * np.random.randint(2, size=(N,N)) - 1
+    return estado
+
+def paso_monte_carlo(config, T):
+    """
+    Realiza 1 Paso Monte Carlo (PMC), que equivale a N^2 intentos de cambio[cite: 98, 99].
+    """
+    N = config.shape[0]
+    
+    # Repetimos el proceso N^2 veces por cada PMC
+    for _ in range(N * N):
+        # Paso (1): Elegir un punto al azar (i, j) de la red[cite: 92].
+        i = np.random.randint(0, N)
+        j = np.random.randint(0, N)
+        S = config[i, j]
+        
+        # Evaluamos los vecinos usando condiciones de contorno periódicas[cite: 94].
+        # El módulo % N hace que si llegamos al borde (N), volvamos a 0.
+        vecinos = (config[(i + 1) % N, j] + 
+                   config[(i - 1) % N, j] + 
+                   config[i, (j + 1) % N] + 
+                   config[i, (j - 1) % N])
+        
+        # Paso (2): Evaluar el cambio de energía dE[cite: 94].
+        dE = 2 * S * vecinos
+        
+        # Paso (3): Criterio de aceptación Metropolis[cite: 94, 95].
+        # p = min(1, exp(-dE/T)). Si dE < 0, siempre se acepta.
+        if dE < 0:
+            S *= -1
+        elif np.random.rand() < np.exp(-dE / T):
+            S *= -1
+            
+        # Actualizamos el espín en la red
+        config[i, j] = S
+        # Paso (4): Volver al paso 1 (se repite N^2 veces gracias al bucle for)[cite: 96].
+
+    return config
+
+def simular_y_mostrar():
+    """
+    Ejecuta la simulación y muestra la evolución por pantalla para diversas temperaturas.
+    """
+    N = 50           # Tamaño de la red N x N
+    pasos_mc = 100   # Número de pasos Monte Carlo a simular
+    
+    # Elegimos tres temperaturas representativas:
+    # T=1.5 (Baja/Ferromagnética), T=2.27 (Cerca del punto crítico Onsager), T=4.0 (Alta/Paramagnética)
+    temperaturas = [1.5, 2.27, 4.0] 
+    
+    fig, axes = plt.subplots(1, len(temperaturas), figsize=(15, 5))
+    
+    for idx, T in enumerate(temperaturas):
+        # Inicializamos la red
+        config = estado_inicial(N)
+        
+        # Dejamos evolucionar el sistema
+        for i in range(pasos_mc):
+            paso_monte_carlo(config, T)
+            
+        # Mostramos el resultado final para esa temperatura
+        ax = axes[idx]
+        # Usamos imshow para mostrar la matriz de espines. 1 será un color, -1 será otro.
+        ax.imshow(config, cmap='coolwarm', vmin=-1, vmax=1)
+        ax.set_title(f'Temperatura T = {T}')
+        ax.axis('off')
+        
+    plt.suptitle(f'Modelo de Ising tras {pasos_mc} Pasos Monte Carlo', fontsize=16)
+    plt.show()
+
+# Ejecutar el programa principal
+if __name__ == "__main__":
+    simular_y_mostrar()
